@@ -1,0 +1,129 @@
+---
+title: "HW 1"
+output: 
+  html_notebook: 
+    toc: yes
+---
+
+```{r}
+library(ggplot2)
+library(knitr)
+```
+
+> This exercise involves the Boston Dataset. \nTo begin, load in the Boston data set. The Boston data set is part of the MASS library in R.
+
+```{r, echo=TRUE}
+library(MASS)
+```
+
+> The data set is contained in the object Boston.
+
+```{r, echo=TRUE}
+Boston
+```
+
+You can read about the data set using the call `?Boston`.
+```{r, echo = TRUE}
+?Boston
+```
+
+> How many rows are in this data set? How many columns? What do the rows and columns represent?
+
+```{r, echo = TRUE}
+dim(Boston)
+```
+
+The data set contains 506 rows and 14 columns, where rows represent observations and columns represent variables.
+
+> Make some pairwise scatterplots of the predictors (columns) in this data set. Describe your findings.
+
+```{r, echo = TRUE}
+pairs(Boston)
+```
+
+This scatter plot is too dense to be able to gain much from. However, we can see that "chas" is a dichotomous variable (Charles River) and that "rad" is probably not normally distributed "Radial highways". We can subset this plot to see more clearly.
+
+```{r, echo = TRUE}
+# take a random sample of 4 columns each time and
+# use this to fill in the plot with a few randomly
+# selected variables; 8 times is enough
+for(i in 1:8){pairs(Boston[,sample(1:14,4)])}
+```
+
+Some more observations:
+
+- The variable Tax seems to have some inflated value around 680, as well as Rad around 24, and Indus at around 19. zn (Zone) is probably zero inflated.
+- Age may be positively correlated with lstat.
+- Age may be positively correlated with nox
+- zn may be correlated with rm 
+- dis may be correlated with zn
+- crim and dis may be non-linearly related. There is a very clear law, perhaps exponential decay law, between the two.
+- medv and rm may be linearly related
+- medv may be correlated with lstat, although it may be non-linear, perhaps logarithmic decay.
+
+> What is the predictor in the data set most correlated with per capita crime rate? Explain the relationship.
+
+We could visually inspect each scatter plot, but it would be more efficient to just run a loop of correlation tests, where we run a correlation between each variable and the target variable, and note down the coefficient and its p-value.
+
+```{r, echo = TRUE}
+correlations = data.frame(variable = NULL, coef = NULL, significant = NULL)
+for(i in 2:dim(Boston)[2]){
+  test = cor.test(Boston$crim,Boston[,i])
+  variable = names(Boston)[i]
+  coef = test$estimate
+  significant = ifelse(test$p.value < 0.05, "YES", "NO")
+  correlations = rbind(correlations,data.frame(variable,coef,significant, row.names = NULL))
+}
+kable(correlations, row.names = FALSE)
+```
+
+It looks like all of the variables except the chas variable are significantly correlated with crim. The chas variable is a categorical variable, so this makes sense. We can also order the observations to see which is most strongly correlated.
+
+```{r, echo = TRUE}
+kable(correlations[order(-abs(correlations$coef)),], row.names = FALSE)
+```
+
+From this table we can see that rad (accessibility to radial highways) is most strongly correlated with crim(per capita crime rate), followed by tax (full value property-tax rate per $10k) and lstat (% lower status of the population).
+
+> How many of the suburbs in this data set bound the Charles River?
+
+```{r, echo = TRUE}
+table(Boston$chas)
+```
+
+The table function counts how many of each observation there is in the variable. In this case, 0 represents Not bounding, and 1 represents Bounds. There are 35 suburbs that bound the river.
+
+> What is the median pupil-teacher ratio among the towns of this data set?
+
+```{r, echo = TRUE}
+summary(Boston$ptratio)
+```
+
+The median pupil-teacher ratio is 19.05 (or just 19).
+
+> Which suburb of Boston has lowest median value of owner-occupied homes? What are the values of the other predictors for that suburb, and how do those values compare to the overall ranges for those predictors? Comment on your findings.
+
+```{r, echo = TRUE}
+head(Boston[order(Boston$medv),])
+apply(Boston, 2, summary)
+```
+
+The suburbs 399 and 406 both have the minimum median value at 5.0; We'll focus on suburb 399.
+
+When compared to the values produced by a `summary()` call, we see that 399 has the following attributes:
+
+- Greater than 3rd quartile criminality rate
+- 0 land zoned lots over 25k sq. ft. (minimum for variable)
+- 18.1% of businesses are non-retail, at exactly the 3rd quartile for this variable
+- This suburb does not border the river
+- This suburb has a relatively high NOx concentration, above the 3rd quartile
+- This suburb has, on average, 5.3 rooms per home, which is just under the 1st quartile mark
+- 100% of homes were built prior to 1940
+- This suburb is relatively close to Boston employment centres, as measured by the weighted mean of distances to 5 different centres.
+- This suburb has the highest index of accessibility to radial highways
+- The tax rate per $10k is 666, at exactly the 3rd quartile mark
+- The pupil-teacher ratio, at 20, is relatively high, indicating that there are fewer teachers as compared to other suburbs
+- This suburb has the highest proportion of black residents
+- This suburb has a high proportion of the population classified as lower status, and falls in the fourth quartile of this distribution
+
+Overall, these statistics suggest that suburb 399 is a poorer suburb, with a very dense population, high pollution, and substantially antiquated infrastructure.
