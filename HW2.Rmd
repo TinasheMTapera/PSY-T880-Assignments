@@ -1,0 +1,245 @@
+---
+title: 'PSY T880: HW 2'
+author: "Tinashe Michael Tapera"
+date: "24 January 2017"
+output:
+  pdf_document:
+    toc: yes
+  html_notebook:
+    toc: yes
+  html_document:
+    toc: yes
+  word_document:
+    toc: yes
+---
+
+```{r, message=FALSE, warning=FALSE, include=FALSE}
+rm(list = ls())
+library(ggplot2)
+library(knitr)
+library(MASS)
+library(tidyverse)
+library(class)
+set.seed(12345)
+```
+
+# Question 1
+> (a) If the Bayes decision boundary is linear, do we expect LDA or QDA to perform better on the training set? On the test set?
+
+QDA has greater flexibility, and so will fit more precisely to the training data. However, its quadratic nature would make it vary from the true linear boundary and so during the test stage LDA would perform better.
+
+> (b) If the Bayes decision boundary is non-linear, do we expect LDA or QDA to perform better on the training set? On the test set?
+
+LDA and QDA could perform similarly on the training set. It's possible that LDA may outperform QDA if the sample is small. On the test set, QDA would definitely outperform LDA as the true boundary is non-linear.
+
+> (c) In general, as the sample size n increases, do we expect the test prediction accuracy of QDA relative to LDA to improve, decline, or be unchanged? Why?
+
+With a small sample, LDA would probably perform as well, if not better than, QDA. This is because few data points do not approximate a quadratic curve very well.
+
+```{r}
+x = seq(-1,1)
+y = x^2
+plot(x,y, xlim = c(-10,10), ylim = c(-10,10), type = "l", main = "Black line: True Separator\nRed line: Estimated")
+abline(0.5,0, col = "red")
+```
+
+As you can see, a straight line can quite well capture all of the data. However, as one adds data points, the true nature of a curve is more distinct and so a non-linear line more accurately approximates the curve, meaning that a linear separator no longer applies, as below.
+
+```{r}
+x = seq(-5,5, 0.25)
+y = x^2
+plot(x,y, xlim = c(-10,10), ylim = c(-10,10), type = "l", main = "Black line: True Separator\nRed line: Estimated")
+abline(0.5,0, col = "red")
+```
+
+> (d) True or False: Even if the Bayes decision boundary for a given problem is linear, we will probably achieve a superior test error rate using QDA rather than LDA because QDA is flexible enough to model a linear decision boundary. Justify your answer.
+
+False. By nature of the quadratic curve, even if a separation boundary is linear for some small range of data (say, between -1 and 1 in the above graph), when the range is expanded ad infinitum, the boundary will rise or fall in a quadratic matter no matter how large or small the coefficients of the quadratic equation are.
+
+$$f(x) = ax^2 + bx + c$$
+
+No matter the size of a, b, and c, the curve will still be a curve that is concave or convex. So at some range to the left or right of the mean of our variable x, the data will fall out of this boundary.
+
+# Question 2
+
+> Using the Boston data set, fit classification models in order to predict whether a given suburb has a crime rate above or below the median. Explore logistic regression, LDA, and KNN models using various subsets of the predictors. Describe your findings.
+
+```{r, preparing the dataset}
+hw2 = data.frame(MASS::Boston)
+# convert the crim indicator. > median crime  = 1, < median = 0
+hw2$crim = ifelse(hw2$crim > median(hw2$crim), 1, 0)
+hw2$crim = as.factor(hw2$crim)
+hw2$chas = as.factor(hw2$chas)
+table(hw2$crim)
+```
+
+A few thoughts on this data set:
+
+- rm should be a median, not mean (can't have 0.4 rooms). I may floor this variable if it's not helpful. [EDIT: floored, no difference]
+
+- a lot of these variables are ratios; it might be necessary to scale everything too
+
+We can check the assumptions for regression before running a model, starting with multicollinearity.
+
+```{r}
+hw2$rm = floor(hw2$rm)
+#run a correlation matrix
+corAnal = data.frame(cor(hw2[-c(1,4)]))
+#loop through these correlations and pick which ones are above 0.8 correlated with one another
+for(i in 1:length(names(corAnal))){
+  index = which(abs(corAnal[,i]) > 0.8 & abs(corAnal[,i]) != 1)
+  print(paste(names(corAnal)[i], ":", rownames(corAnal)[index]))
+}
+```
+
+So it looks as though "index of accessibility to radial highways" is strongly correlated with "full-value property-tax rate per \$10,000". Which would make sense. We can keep an eye on these when we run the models.
+
+Let's check normality next. We'll scale and centre all of the continuous variables; sometimes it's just good practice to do so anyway.
+
+```{r}
+hw2[,-c(1,4)] = apply(hw2[,-c(1,4)], 2, scale)
+gather(hw2[,-c(1,4)], variable, value) %>%
+  ggplot(data = ., aes(x = value))+
+  geom_histogram(binwidth = 0.25)+
+  facet_wrap(~variable)
+```
+
+After centering and scaling the variables, we can see which ones will probably be problematic when it comes to violating normality assumptions. We can come back to this plot later. 
+
+For this assignment, we want to eventually be able to compare the models, so we need to pick a comparable metric to do so. The best may be the training and testing errors.
+
+Let's fit the first model:
+
+## Logistic regression.
+
+We'll split our data into 60% training, and 40% testing partitions. For naive models that output a probability, we'll use a 0.5 boundary as the crim variable is perfectly split.
+
+```{r}
+train = sample(1:dim(hw2)[1],2/3*dim(hw2)[1])
+
+model1 = glm(formula = crim ~., family = "binomial", data = hw2[train,])
+summary(model1)
+y = model1$y
+yhat = ifelse(model1$fitted.values > 0.5, 1, 0)
+table(data.frame(y,yhat))
+trainError = 1-mean(y == yhat)
+paste("Training Error = ", round(trainError,3))
+```
+
+This is a fabulous training error rate. Let's apply the model to the test data.
+
+```{r}
+yhat = predict.glm(model1, newdata = hw2[-train,], type = "response")
+yhat = ifelse(yhat > 0.5, 1, 0)
+y = hw2[-train,"crim"]
+table(data.frame(y,yhat))
+testError = 1-mean(y == yhat)
+paste("Testing Error = ", round(testError,3))
+```
+
+The error delta between training and testing, therefore, was `r testError - trainError`. I don't feel like there's any justification to remove or add any other variables with such a high rate, however, I did notice that rm was insignificant. 
+
+Let's fit the second model:
+
+## LDA
+
+```{r}
+train = sample(1:dim(hw2)[1],2/3*dim(hw2)[1])
+
+model2 = lda(formula = crim ~., data = hw2[train,])
+model2
+y = hw2[-train,"crim"]
+yhat = predict(model2, hw2[-train,])
+yhat = yhat$class
+table(data.frame(y,yhat))
+testError = 1-mean(y == yhat)
+paste("Testing Error = ", round(testError,3))
+```
+
+This model was outperformed by the logistic regression. Perhaps we can use a subset of variables to see if this will improve the model. We'll first take out one of the correlated variables "rad" and "tax".
+
+```{r}
+train = sample(1:dim(hw2)[1],2/3*dim(hw2)[1])
+
+model3 = lda(formula = crim ~., data = hw2[train,-9])
+model3
+y = hw2[-train,"crim"]
+yhat = predict(model3, hw2[-train,-9])
+yhat = yhat$class
+table(data.frame(y,yhat))
+testError = 1-mean(y == yhat)
+paste("Testing Error = ", round(testError,3))
+```
+
+Not a huge change. Maybe it's necessary to remove the degenerate distributed variables, namely black and zn.
+
+```{r}
+train = sample(1:dim(hw2)[1],2/3*dim(hw2)[1])
+
+model4 = lda(formula = crim ~., data = hw2[train,-c(2,9,12)])
+model4
+y = hw2[-train,"crim"]
+yhat = predict(model4, hw2[-train,-c(2,9,12)])
+yhat = yhat$class
+table(data.frame(y,yhat))
+testError = 1-mean(y == yhat)
+paste("Testing Error = ", round(testError,3))
+```
+
+That only made it worse. Clearly LDA is not going to get below 10% accuracy with this data set unless some more thorough feature engineering is done.
+
+Let's fit the final model:
+
+## *k*-NN
+
+```{r}
+train = sample(1:dim(hw2)[1],2/3*dim(hw2)[1])
+
+model5 = knn(train = hw2[train,-1], test = hw2[-train,-1], cl = hw2[train, "crim"], k = 1)
+yhat = model5
+y = hw2[-train,1]
+table(data.frame(y,yhat))
+testError = 1-mean(y == yhat)
+paste("Testing Error = ", round(testError,3))
+```
+
+This isn't bad, considering the LDA did somewhat worse. We can try and refine it by playing around with *k*.
+
+```{r}
+train = sample(1:dim(hw2)[1],2/3*dim(hw2)[1])
+
+model6 = knn(train = hw2[train,-1], test = hw2[-train,-1], cl = hw2[train, "crim"], k = 10)
+yhat = model6
+y = hw2[-train,1]
+table(data.frame(y,yhat))
+testError = 1-mean(y == yhat)
+paste("Testing Error = ", round(testError,3))
+```
+
+```{r}
+train = sample(1:dim(hw2)[1],2/3*dim(hw2)[1])
+
+model7 = knn(train = hw2[train,-1], test = hw2[-train,-1], cl = hw2[train, "crim"], k = 5)
+yhat = model7
+y = hw2[-train,1]
+table(data.frame(y,yhat))
+testError = 1-mean(y == yhat)
+paste("Testing Error = ", round(testError,3))
+```
+
+```{r}
+train = sample(1:dim(hw2)[1],2/3*dim(hw2)[1])
+
+model8 = knn(train = hw2[train,-1], test = hw2[-train,-1], cl = hw2[train, "crim"], k = 2)
+yhat = model8
+y = hw2[-train,1]
+table(data.frame(y,yhat))
+testError = 1-mean(y == yhat)
+paste("Testing Error = ", round(testError,3))
+```
+
+It seems as though *k* = 5 seems to work best for the data set in this way. It must also be mentioned that the data is already scaled and centred, which is a benefit for the *k*-NN algorithm.
+
+## Conclusion
+
+The best algorithm for this classification problem was the *k*-NN classifier with threshold of 0.5, which achieved the lowest (<10%) testing error.
