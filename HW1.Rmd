@@ -1,25 +1,31 @@
 ---
-title: "HW 1"
-output: 
-  html_notebook: 
-    toc: yes
+title: 'PSY T880: HW 1'
+author: "Tinashe Michael Tapera"
+date: "24 January 2017"
+output:
+  pdf_document:
+    toc: no
+  html_notebook:
+    toc: no
+  word_document:
+    toc: no
 ---
 
-```{r}
+```{r, echo=FALSE}
 library(ggplot2)
 library(knitr)
 ```
 
-> This exercise involves the Boston Dataset. \nTo begin, load in the Boston data set. The Boston data set is part of the MASS library in R.
+> This exercise involves the Boston Dataset. To begin, load in the Boston data set. The Boston data set is part of the MASS library in R.
 
-```{r, echo=TRUE}
+```{r, echo=FALSE}
 library(MASS)
 ```
 
 > The data set is contained in the object Boston.
 
 ```{r, echo=TRUE}
-Boston
+head(Boston)
 ```
 
 You can read about the data set using the call `?Boston`.
@@ -41,9 +47,9 @@ The data set contains 506 rows and 14 columns, where rows represent observations
 pairs(Boston)
 ```
 
-This scatter plot is too dense to be able to gain much from. However, we can see that "chas" is a dichotomous variable (Charles River) and that "rad" is probably not normally distributed "Radial highways". We can subset this plot to see more clearly.
+This scatter plot is too dense to be able to gain much from. However, we can see that "chas" is a dichotomous variable (Charles River) and that "rad" is probably not normally distributed (Radial highways). We can subset this plot to see more clearly.
 
-```{r, echo = TRUE}
+```{r, echo = TRUE, results = 'asis', fig.width=4}
 # take a random sample of 4 columns each time and
 # use this to fill in the plot with a few randomly
 # selected variables; 8 times is enough
