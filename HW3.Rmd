@@ -38,7 +38,7 @@ fit1 = glm(default~ income + balance, data = Default, family = "binomial")
 summary(fit1)
 ```
 
-The coefficient for `income` is given by `r round(coef(fit1)[2],3)`, with standard error of $4.985 \times 10^{-6}$, while the coefficient for `balance` is given by `r round(coef(fit1)[3],3)`, with standard error of $2.274 \times 10^{-4}$.
+The coefficient for `income` is given by `r coef(fit1)[2]`, with standard error of $4.985 \times 10^{-6}$, while the coefficient for `balance` is given by `r coef(fit1)[3]`, with standard error of $2.274 \times 10^{-4}$.
 
 ## (b)
 > Write a function, boot.fn(), that takes as input the Default data set as well as an index of the observations, and that outputs the coefficient estimates for income and balance in the multiple logistic regression model.
