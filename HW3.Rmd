@@ -48,8 +48,6 @@ boot.fn = function(dataset, index){
   bootFit = glm(default~ income + balance, data = dataset, family = "binomial", subset = index)
   return(coef(bootFit))
 }
-
-boot.fn(Default,dim(Default)[1]*0.6)
 ```
 
 ## (c) 
