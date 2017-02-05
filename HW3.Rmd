@@ -1,0 +1,20 @@
+---
+title: 'PSY T880: HW 3'
+author: "Tinashe Michael Tapera"
+date: "5 February 2017"
+output: html_notebook
+---
+
+# Question 1: *k*-fold cross validation.
+> Explain how k-fold cross-validation is implemented.
+
+Cross-validation (CV) is a means of estimating how well a model will perform in practice on an unknown data set. CV entails withholding part of the data set, and training a model on the given data (i.e. estimating parameters such as coefficients). In the case of *k*-fold CV, we split the data set into *k* approximately equal parts, called partitions, and then withhold a partition *k* from the model fitting stage, exactly *k* times. Each time we withhold the next *k*th partition, we fit a model to the remaining data and compute an estimate of our target evaluation/fitting statistic of choice. We can then come up with a grand estimate of model fitting, usually by averaging these estimates. Essentially, the model is exposed iteratively to all of the data, but can still be evaluated, and hence validated, as though it were naive to some of the data points.
+
+> What are the advantages and disadvantages of k-fold cross-
+validation relative to: i. The validation set approach? ii. LOOCV?
+
+*k*-fold is a particularly useful CV approach as it allows the model to be essentially trained on all the training data one has. The validation-set approach, on the other hand, trains only on a training set, and validates only on the validation set; if the two sets are in any way statistically different, this approach will over or under-estimate model fitting statistics. On the other hand, *k*-fold CV can be more time and effort consuming than the validation set approach, especially if the validation and training set are truly randomly selected.
+
+LOOCV is at the other extreme; *k* is set to the number of observations in the data set, and so the model is fit exactly *k*-1 times where the validation set is one data point that is left out. Again, the model fit metric is computed each time, and this means that LOOCV is extremely computationally expensive, more than *k*-fold CV. Despite this, LOOCV ensures that each data point's model fit is accounted for, meaning that the estimated model fit statistic *could be* more accurate and statistically relevant.
+
+# Question 2: Computing estimates for standard errors
