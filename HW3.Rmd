@@ -46,9 +46,7 @@ The coefficient for `income` is given by `r round(coef(fit1)[2],3)`, with standa
 ```{r}
 boot.fn = function(dataset, index){
   bootFit = glm(default~ income + balance, data = dataset, family = "binomial", subset = index)
-  income = coef(fit1)[2]
-  balance = coef(fit1)[3]
-  return(c(income,balance))
+  return(coef(bootFit))
 }
 
 boot.fn(Default,dim(Default)[1]*0.6)
@@ -58,6 +56,10 @@ boot.fn(Default,dim(Default)[1]*0.6)
 > Use the boot() function together with your boot.fn() function to estimate the standard errors of the logistic regression coefficients for income and balance.
 
 ```{r}
-
+boot(Default,boot.fn,100)
 ```
 
+## (d) 
+> Comment on the estimated standard errors obtained using the glm() function and using your bootstrap function.
+
+The values for the estimated errors are very similar, although the bootstrapped error is slightly lower. This would ideally be a good thing, indicating a smaller margin of error for the measurement.
